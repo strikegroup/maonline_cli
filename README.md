@@ -330,13 +330,10 @@ maonline status
 
 API キーの登録状態、設定ファイルのパス、データディレクトリを表示します。API キーそのものは表示しません。
 
+## 開発者向け情報
+
+開発環境の準備、実装構成、テスト、リリース手順は [Development Guide](docs/development.md) を参照してください。
+
 ## ライセンス
 
 このソフトウェアは [Apache License 2.0](LICENSE) で提供します。
-
-依存クレートのライセンス文書を更新するには、`cargo-about` 0.9.2 をインストールして生成コマンドを実行します。生成された `THIRD_PARTY_LICENSES.html` もリポジトリへコミットしてください。
-
-```bash
-cargo install --locked cargo-about --version 0.9.2 --features cli
-cargo about generate --locked --fail --output-file THIRD_PARTY_LICENSES.html about.hbs
-```
