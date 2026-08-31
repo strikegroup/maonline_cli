@@ -1,3 +1,5 @@
 /target
 .env
 maonline
+/docs
+!/docs/development.md
