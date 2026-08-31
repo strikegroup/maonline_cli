@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Strike Group Co., Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::Context;
 
 use super::{company_info::CompanyInfo, raw_response::RawResponse};

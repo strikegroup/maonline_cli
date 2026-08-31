@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Strike Group Co., Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(super) enum ArticleType {
     News,
