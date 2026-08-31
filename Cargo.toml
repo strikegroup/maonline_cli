@@ -1,14 +1,22 @@
 [package]
 name = "maonline_cli"
-description = "A command-line interface for the M&A Online."
+description = "A command-line interface for M&A Online."
 repository = "https://github.com/strikegroup/maonline_cli"
 homepage = "https://github.com/strikegroup/maonline_cli"
 categories = ["command-line-utilities"]
-keywords = ["M&A Online", "cli", "M&A"]
+keywords = ["maonline", "cli", "mergers", "acquisitions"]
 version = "0.0.0"
 edition = "2024"
 default-run = "maonline"
 license = "Apache-2.0"
+exclude = [
+    ".github/",
+    ".gitignore",
+    "about.hbs",
+    "about.toml",
+    "docs/",
+    "release-plz.toml",
+]
 
 [[bin]]
 name = "maonline"
