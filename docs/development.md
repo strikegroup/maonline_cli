@@ -114,7 +114,7 @@ API 項目やクエリパラメータを変更する場合は、次を合わせ�
 
 CI は push と pull request に対して、フォーマット、ビルド、テストを実行します。
 
-`release-plz` がリリースPR、タグ、GitHub Releaseを管理し、リリース作成後に cargo-dist のワークフローを起動します。cargo-dist は各対象プラットフォームの配布物を作成し、GitHub Release の公開と Homebrew Formula の更新を行います。
+`release-plz` がリリースPR、タグ、GitHub Releaseを管理し、リリース作成後に cargo-dist のワークフローを起動します。cargo-dist は各対象プラットフォームの配布物を作成し、GitHub Release の公開、Homebrew Formula の更新、npm パッケージの公開を行います。
 
 `Cargo.toml` の `[workspace.metadata.dist]` を変更した場合は、ワークフローを再生成して差分を確認します。
 

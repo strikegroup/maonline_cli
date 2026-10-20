@@ -22,6 +22,12 @@ cargo install --locked maonline_cli
 brew install strikegroup/tap/maonline
 ```
 
+### npm
+
+```bash
+npm install --global maonline-cli
+```
+
 ## セットアップ
 
 M&A Online の管理者から API キーを取得し、最初に登録します。
