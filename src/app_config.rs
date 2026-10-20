@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Context;
+use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, Write};
 
@@ -139,15 +140,16 @@ fn confirm_research_kit_policy(
 ) -> anyhow::Result<()> {
     writeln!(
         output,
-        "M&A Online CLI の利用には、M＆A Online Research Kit利用特約への同意が必要です。"
+        "You must agree to the M&A Online Research Kit Terms of Use to use M&A Online CLI."
     )?;
+    let url = RESEARCH_KIT_POLICY_URL.cyan().underline();
     writeln!(
         output,
-        "以下のURLから利用特約を確認してください。\n{RESEARCH_KIT_POLICY_URL}\n"
+        "Please review the terms at the following URL:\n{url}\n"
     )?;
 
     loop {
-        write!(output, "利用特約に同意しますか？ [y/N]: ")?;
+        write!(output, "Do you agree to the terms? [y/N]: ")?;
         output.flush()?;
 
         let mut answer = String::new();
@@ -157,14 +159,9 @@ fn confirm_research_kit_policy(
         match answer.trim().to_ascii_lowercase().as_str() {
             "y" | "yes" => return Ok(()),
             "" | "n" | "no" => {
-                anyhow::bail!(
-                    "利用特約への同意が確認できなかったため、セットアップを中止しました。"
-                )
+                anyhow::bail!("Setup cancelled because you did not agree to the terms.")
             }
-            _ => writeln!(
-                output,
-                "y（同意する）または n（同意しない）を入力してください。"
-            )?,
+            _ => writeln!(output, "Please enter y (agree) or n (decline).")?,
         }
     }
 }
@@ -179,8 +176,8 @@ mod tests {
             let mut output = Vec::new();
             confirm_research_kit_policy(&mut answer.as_bytes(), &mut output).unwrap();
             let output = String::from_utf8(output).unwrap();
-            assert!(output.contains(RESEARCH_KIT_POLICY_URL));
-            assert!(output.contains("利用特約に同意しますか？ [y/N]: "));
+            assert!(output.contains(&RESEARCH_KIT_POLICY_URL.cyan().underline().to_string()));
+            assert!(output.contains("Do you agree to the terms? [y/N]: "));
         }
     }
 
@@ -189,7 +186,7 @@ mod tests {
         for answer in ["n\n", "no\n", "N\n", "NO\n", "\n", ""] {
             let error =
                 confirm_research_kit_policy(&mut answer.as_bytes(), &mut Vec::new()).unwrap_err();
-            assert!(error.to_string().contains("セットアップを中止しました"));
+            assert!(error.to_string().contains("Setup cancelled"));
         }
     }
 
@@ -199,7 +196,7 @@ mod tests {
         confirm_research_kit_policy(&mut &b"maybe\ny\n"[..], &mut output).unwrap();
         let output = String::from_utf8(output).unwrap();
         assert_eq!(
-            output.matches("利用特約に同意しますか？ [y/N]: ").count(),
+            output.matches("Do you agree to the terms? [y/N]: ").count(),
             2
         );
     }
