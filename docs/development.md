@@ -143,6 +143,12 @@ npm は初回リリースのバイナリ公開後にパッケージを手動公�
 
 APT の公開には GitHub Pages の Source を GitHub Actions に設定する必要があります。
 
+APT ジョブがスキップされた場合など、公開済みの GitHub Release から APT だけを再配布するには、`main` に対して次を実行します。指定したリリースの Linux 成果物とチェックサムを取得し、検証後に deb の生成・署名と Pages への配置を行います。
+
+```bash
+gh workflow run publish-apt.yml --ref main -f tag=v0.0.1
+```
+
 ## ライセンス更新
 
 依存クレートのライセンス文書を更新するには、`cargo-about` 0.9.2 を使います。生成された `THIRD_PARTY_LICENSES.html` もリポジトリへコミットしてください。

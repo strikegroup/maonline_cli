@@ -1,6 +1,13 @@
 name: Publish APT repository
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published GitHub Release tag to distribute via APT
+        required: true
+        type: string
+        default: v0.0.1
   workflow_call:
     inputs:
       plan:
@@ -20,7 +27,8 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ !fromJSON(inputs.plan).announcement_is_prerelease }}
+    # Reusable calls inherit the caller's event, so distinguish direct runs by tag.
+    if: ${{ inputs.tag != '' || !fromJSON(inputs.plan).announcement_is_prerelease }}
     runs-on: ubuntu-22.04
     environment:
       name: github-pages
@@ -36,14 +44,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
           persist-credentials: false
 
       - name: Download release artifacts
+        if: ${{ inputs.tag == '' }}
         uses: actions/download-artifact@v8
         with:
           pattern: artifacts-*
           path: artifacts/
           merge-multiple: true
+
+      - name: Download and verify published release artifacts
+        if: ${{ inputs.tag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease \
+            | jq --exit-status '.isDraft == false and .isPrerelease == false'
+          gh release download "$RELEASE_TAG" --dir artifacts \
+            --pattern dist-manifest.json \
+            --pattern 'maonline_cli-*-unknown-linux-gnu.tar.xz' \
+            --pattern 'maonline_cli-*-unknown-linux-gnu.tar.xz.sha256'
+          jq --exit-status --arg tag "$RELEASE_TAG" \
+            '.announcement_tag == $tag and .announcement_is_prerelease == false' \
+            artifacts/dist-manifest.json
+          (
+            cd artifacts
+            sha256sum --check maonline_cli-*-unknown-linux-gnu.tar.xz.sha256
+          )
+          printf 'PLAN=%s\n' "$(jq --compact-output . artifacts/dist-manifest.json)" >> "$GITHUB_ENV"
 
       - name: Install packaging tools
         shell: bash
