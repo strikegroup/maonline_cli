@@ -65,7 +65,8 @@ enum SubCommand {
     News(crate::news::command::NewsArgs),
     #[command(
         about = "M&A Online API の API キーを登録します",
-        after_help = "登録後は、各検索コマンドで API キーを指定する必要はありません。\n\n\
+        after_help = "利用特約（https://maonline.jp/pages/policy_researchkit）を確認し、同意すると API キーを保存します。\n\
+                      登録後は、各検索コマンドで API キーを指定する必要はありません。\n\n\
                       使用例:\n  maonline setup --key YOUR_API_KEY"
     )]
     Setup(crate::app_config::SetupArgs),

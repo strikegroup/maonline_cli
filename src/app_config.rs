@@ -4,6 +4,9 @@
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+use std::io::{BufRead, Write};
+
+const RESEARCH_KIT_POLICY_URL: &str = "https://maonline.jp/pages/policy_researchkit";
 
 #[derive(clap::Args, Debug)]
 pub struct SetupArgs {
@@ -124,7 +127,80 @@ pub fn resolve_api_key(cli_api_key: Option<&str>) -> anyhow::Result<String> {
 }
 
 pub fn run_setup(args: SetupArgs) -> anyhow::Result<()> {
+    confirm_research_kit_policy(&mut std::io::stdin().lock(), &mut std::io::stderr().lock())?;
     let path = save_api_key(&args.key)?;
     println!("Saved M&A Online API key to {}", path.display());
     Ok(())
+}
+
+fn confirm_research_kit_policy(
+    input: &mut impl BufRead,
+    output: &mut impl Write,
+) -> anyhow::Result<()> {
+    writeln!(
+        output,
+        "M&A Online CLI の利用には、M＆A Online Research Kit利用特約への同意が必要です。"
+    )?;
+    writeln!(
+        output,
+        "以下のURLから利用特約を確認してください。\n{RESEARCH_KIT_POLICY_URL}\n"
+    )?;
+
+    loop {
+        write!(output, "利用特約に同意しますか？ [y/N]: ")?;
+        output.flush()?;
+
+        let mut answer = String::new();
+        input
+            .read_line(&mut answer)
+            .context("failed to read policy confirmation")?;
+        match answer.trim().to_ascii_lowercase().as_str() {
+            "y" | "yes" => return Ok(()),
+            "" | "n" | "no" => {
+                anyhow::bail!(
+                    "利用特約への同意が確認できなかったため、セットアップを中止しました。"
+                )
+            }
+            _ => writeln!(
+                output,
+                "y（同意する）または n（同意しない）を入力してください。"
+            )?,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn policy_confirmation_requires_explicit_consent() {
+        for answer in ["y\n", "yes\n", "Y\n", "YES\n", " yes \r\n"] {
+            let mut output = Vec::new();
+            confirm_research_kit_policy(&mut answer.as_bytes(), &mut output).unwrap();
+            let output = String::from_utf8(output).unwrap();
+            assert!(output.contains(RESEARCH_KIT_POLICY_URL));
+            assert!(output.contains("利用特約に同意しますか？ [y/N]: "));
+        }
+    }
+
+    #[test]
+    fn policy_confirmation_rejects_decline_empty_input_and_eof() {
+        for answer in ["n\n", "no\n", "N\n", "NO\n", "\n", ""] {
+            let error =
+                confirm_research_kit_policy(&mut answer.as_bytes(), &mut Vec::new()).unwrap_err();
+            assert!(error.to_string().contains("セットアップを中止しました"));
+        }
+    }
+
+    #[test]
+    fn policy_confirmation_reprompts_after_invalid_input() {
+        let mut output = Vec::new();
+        confirm_research_kit_policy(&mut &b"maybe\ny\n"[..], &mut output).unwrap();
+        let output = String::from_utf8(output).unwrap();
+        assert_eq!(
+            output.matches("利用特約に同意しますか？ [y/N]: ").count(),
+            2
+        );
+    }
 }
