@@ -61,8 +61,7 @@ cargo run -- news search ストライク
 .
 ├── .github/workflows/
 ├── docs/
-│   ├── development.md
-│   └── research_api_v1_spec.md
+│   └── development.md
 ├── src/
 │   ├── app_config.rs
 │   ├── app_paths.rs
@@ -83,7 +82,6 @@ cargo run -- news search ストライク
 - `src/companies/`: 企業情報の検索と出力モデルへの変換を担当します。
 - `src/ma_data/`: M&A 案件の検索と出力モデルへの変換を担当します。
 - `src/news/`: ニュースの検索、記事取得、出力モデルへの変換を担当します。
-- `docs/research_api_v1_spec.md`: M&A Online Research API v1 の仕様を記録します。
 
 ## API クライアントの構成
 
@@ -116,7 +114,11 @@ API 項目やクエリパラメータを変更する場合は、次を合わせ�
 
 CI は push と pull request に対して、フォーマット、ビルド、テストを実行します。
 
-`release-plz` がリリースPR、タグ、GitHub Releaseを管理し、リリース作成後に cargo-dist のワークフローを起動します。cargo-dist は各対象プラットフォームの配布物を作成し、GitHub Release の公開と Homebrew Formula の更新を行います。
+リリースは release-plz が作成する Release PR のマージを契機に行います。`release_always = false` により、通常の変更を `main` に push しただけでは公開しません。手動のタグ作成や先行した `cargo publish` は避けてください。
+
+初回は未公開 crate の更新差分がないため、配布設定のマージと認証設定を済ませた後、`Release-plz` ワークフローを `main` に対して手動実行し、`initial_release` を `true` にします。この操作で初回の crates.io 公開とバイナリ配布が開始されます。以降の公開は Release PR を使用します。
+
+`release-plz` がリリースPR、タグ、GitHub Releaseを管理し、リリース作成後に cargo-dist のワークフローを起動します。cargo-dist は各対象プラットフォームの配布物を作成し、GitHub Release の公開、Homebrew Formula の更新、npm パッケージの公開を行います。リリース公開後に、APT ワークフローが署名付きリポジトリを GitHub Pages へ公開します。
 
 `Cargo.toml` の `[workspace.metadata.dist]` を変更した場合は、ワークフローを再生成して差分を確認します。
 
@@ -131,9 +133,15 @@ dist plan
 リリースには、GitHub Actions の次のSecretを使用します。
 
 - `HOMEBREW_TAP_TOKEN`: Homebrew Tap の更新
-- `CARGO_REGISTRY_TOKEN`: crates.io 公開を有効化した場合の認証
+- `CARGO_REGISTRY_TOKEN`: crates.io 公開の認証
+- `APT_GPG_PRIVATE_KEY`: APT リポジトリの署名用秘密鍵
+- `APT_GPG_PASSPHRASE`: APT 署名鍵のパスフレーズ
 
-現在の `release-plz.toml` では `publish = false` のため、release-plz による crates.io 公開は無効です。
+`release-plz.toml` では crates.io 公開を有効にしています。公開には `CARGO_REGISTRY_TOKEN` の登録が必要です。
+
+npm は初回リリースのバイナリ公開後にパッケージを手動公開し、Trusted Publisher に `strikegroup/maonline_cli` の `release.yml` を登録します。設定完了後、GitHub Actions の Repository variable `NPM_TRUSTED_PUBLISHING_ENABLED` を `true` にすると、以降のリリースで npm の自動公開が有効になります。未設定時は npm の公開ジョブをスキップし、他の配布処理を継続します。`NPM_TOKEN` は使用しません。
+
+APT の公開には GitHub Pages の Source を GitHub Actions に設定する必要があります。
 
 ## ライセンス更新
 

@@ -22,6 +22,23 @@ cargo install --locked maonline_cli
 brew install strikegroup/tap/maonline
 ```
 
+### npm
+
+```bash
+npm install --global maonline-cli
+```
+
+### APT（Ubuntu / Debian）
+
+```bash
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://strikegroup.github.io/maonline_cli/apt/maonline-cli-archive-keyring.gpg \
+  | sudo tee /etc/apt/keyrings/maonline-cli-archive-keyring.gpg > /dev/null
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/maonline-cli-archive-keyring.gpg] https://strikegroup.github.io/maonline_cli/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/maonline-cli.list > /dev/null
+sudo apt update && sudo apt install maonline-cli
+```
+
 ## セットアップ
 
 M&A Online の管理者から API キーを取得し、最初に登録します。
@@ -29,6 +46,8 @@ M&A Online の管理者から API キーを取得し、最初に登録します�
 ```bash
 maonline setup --key YOUR_API_KEY
 ```
+
+実行すると、[M＆A Online Research Kit利用特約](https://maonline.jp/pages/policy_researchkit)のURLと同意確認が表示されます。内容を確認し、同意する場合は `y` または `yes` を入力してください。同意しない場合や未入力の場合は、API キーを保存せずにセットアップを中止します。
 
 登録後は、各検索コマンドで API キーを指定する必要はありません。登録状態は `maonline status` で確認できます。
 
@@ -320,7 +339,7 @@ maonline news get ARTICLE_ID
 maonline setup --key API_KEY
 ```
 
-M&A Online API キーを登録します。
+利用特約のURLと同意確認を表示し、同意すると M&A Online API キーを登録します。再登録時も同意確認を行います。
 
 ### `status`
 
