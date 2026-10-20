@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   publish:
+    if: ${{ vars.NPM_TRUSTED_PUBLISHING_ENABLED == 'true' }}
     runs-on: ubuntu-22.04
     env:
       PLAN: ${{ inputs.plan }}

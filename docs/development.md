@@ -137,6 +137,10 @@ dist plan
 
 `release-plz.toml` では crates.io 公開を有効にしています。公開には `CARGO_REGISTRY_TOKEN` の登録が必要です。
 
+npm は初回リリースのバイナリ公開後にパッケージを手動公開し、Trusted Publisher に `strikegroup/maonline_cli` の `release.yml` を登録します。設定完了後、GitHub Actions の Repository variable `NPM_TRUSTED_PUBLISHING_ENABLED` を `true` にすると、以降のリリースで npm の自動公開が有効になります。未設定時は npm の公開ジョブをスキップし、他の配布処理を継続します。`NPM_TOKEN` は使用しません。
+
+APT の公開には GitHub Pages の Source を GitHub Actions に設定する必要があります。
+
 ## ライセンス更新
 
 依存クレートのライセンス文書を更新するには、`cargo-about` 0.9.2 を使います。生成された `THIRD_PARTY_LICENSES.html` もリポジトリへコミットしてください。
