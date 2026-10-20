@@ -28,6 +28,17 @@ brew install strikegroup/tap/maonline
 npm install --global maonline-cli
 ```
 
+### APT（Ubuntu / Debian）
+
+```bash
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://strikegroup.github.io/maonline_cli/apt/maonline-cli-archive-keyring.gpg \
+  | sudo tee /etc/apt/keyrings/maonline-cli-archive-keyring.gpg > /dev/null
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/maonline-cli-archive-keyring.gpg] https://strikegroup.github.io/maonline_cli/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/maonline-cli.list > /dev/null
+sudo apt update && sudo apt install maonline-cli
+```
+
 ## セットアップ
 
 M&A Online の管理者から API キーを取得し、最初に登録します。

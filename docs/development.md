@@ -114,7 +114,7 @@ API 項目やクエリパラメータを変更する場合は、次を合わせ�
 
 CI は push と pull request に対して、フォーマット、ビルド、テストを実行します。
 
-`release-plz` がリリースPR、タグ、GitHub Releaseを管理し、リリース作成後に cargo-dist のワークフローを起動します。cargo-dist は各対象プラットフォームの配布物を作成し、GitHub Release の公開、Homebrew Formula の更新、npm パッケージの公開を行います。
+`release-plz` がリリースPR、タグ、GitHub Releaseを管理し、リリース作成後に cargo-dist のワークフローを起動します。cargo-dist は各対象プラットフォームの配布物を作成し、GitHub Release の公開、Homebrew Formula の更新、npm パッケージの公開を行います。リリース公開後に、APT ワークフローが署名付きリポジトリを GitHub Pages へ公開します。
 
 `Cargo.toml` の `[workspace.metadata.dist]` を変更した場合は、ワークフローを再生成して差分を確認します。
 
@@ -129,7 +129,9 @@ dist plan
 リリースには、GitHub Actions の次のSecretを使用します。
 
 - `HOMEBREW_TAP_TOKEN`: Homebrew Tap の更新
-- `CARGO_REGISTRY_TOKEN`: crates.io 公開を有効化した場合の認証
+- `CARGO_REGISTRY_TOKEN`: crates.io 公開の認証
+- `APT_GPG_PRIVATE_KEY`: APT リポジトリの署名用秘密鍵
+- `APT_GPG_PASSPHRASE`: APT 署名鍵のパスフレーズ
 
 `release-plz.toml` では crates.io 公開を有効にしています。公開には `CARGO_REGISTRY_TOKEN` の登録が必要です。
 
