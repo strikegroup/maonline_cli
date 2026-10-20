@@ -131,7 +131,7 @@ dist plan
 - `HOMEBREW_TAP_TOKEN`: Homebrew Tap の更新
 - `CARGO_REGISTRY_TOKEN`: crates.io 公開を有効化した場合の認証
 
-現在の `release-plz.toml` では `publish = false` のため、release-plz による crates.io 公開は無効です。
+`release-plz.toml` では crates.io 公開を有効にしています。公開には `CARGO_REGISTRY_TOKEN` の登録が必要です。
 
 ## ライセンス更新
 
