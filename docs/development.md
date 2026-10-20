@@ -114,6 +114,8 @@ API 項目やクエリパラメータを変更する場合は、次を合わせ�
 
 CI は push と pull request に対して、フォーマット、ビルド、テストを実行します。
 
+リリースは release-plz が作成する Release PR のマージを契機に行います。`release_always = false` により、通常の変更を `main` に push しただけでは公開しません。手動のタグ作成や先行した `cargo publish` は避けてください。
+
 `release-plz` がリリースPR、タグ、GitHub Releaseを管理し、リリース作成後に cargo-dist のワークフローを起動します。cargo-dist は各対象プラットフォームの配布物を作成し、GitHub Release の公開、Homebrew Formula の更新、npm パッケージの公開を行います。リリース公開後に、APT ワークフローが署名付きリポジトリを GitHub Pages へ公開します。
 
 `Cargo.toml` の `[workspace.metadata.dist]` を変更した場合は、ワークフローを再生成して差分を確認します。

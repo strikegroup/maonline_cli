@@ -1,5 +1,6 @@
 [workspace]
 git_only = false
 publish = true
+release_always = false
 git_release_draft = true
 git_release_latest = false
