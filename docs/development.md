@@ -61,8 +61,7 @@ cargo run -- news search ストライク
 .
 ├── .github/workflows/
 ├── docs/
-│   ├── development.md
-│   └── research_api_v1_spec.md
+│   └── development.md
 ├── src/
 │   ├── app_config.rs
 │   ├── app_paths.rs
@@ -83,7 +82,6 @@ cargo run -- news search ストライク
 - `src/companies/`: 企業情報の検索と出力モデルへの変換を担当します。
 - `src/ma_data/`: M&A 案件の検索と出力モデルへの変換を担当します。
 - `src/news/`: ニュースの検索、記事取得、出力モデルへの変換を担当します。
-- `docs/research_api_v1_spec.md`: M&A Online Research API v1 の仕様を記録します。
 
 ## API クライアントの構成
 
