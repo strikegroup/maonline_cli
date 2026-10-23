@@ -98,7 +98,8 @@ pub fn load_api_key() -> anyhow::Result<String> {
             config_path.display()
         )
     })?;
-    let config: ConfigFile = toml::from_str(&content)
+    // TOML parser errors include source excerpts, which may contain the API key.
+    let config = parse_config(&content)
         .with_context(|| format!("failed to parse config file {}", config_path.display()))?;
     let api_key = config.maonline_api_key.trim();
     if api_key.is_empty() {
@@ -109,6 +110,10 @@ pub fn load_api_key() -> anyhow::Result<String> {
     }
 
     Ok(api_key.to_owned())
+}
+
+fn parse_config(content: &str) -> anyhow::Result<ConfigFile> {
+    toml::from_str(content).map_err(|_| anyhow::anyhow!("invalid configuration TOML"))
 }
 
 /// `--key` → `MAONLINE_API_KEY` → `config.toml` の順でAPIキーを解決する。
@@ -229,5 +234,10 @@ mod tests {
         assert!(
             resolve_api_key_from_sources(None, None, || anyhow::bail!("missing config")).is_err()
         );
+    }
+    #[test]
+    fn malformed_config_diagnostics_do_not_disclose_key_values() {
+        let error = parse_config("maonline_api_key = secret-key").unwrap_err();
+        assert!(!format!("{error:#?} {error:#}").contains("secret-key"));
     }
 }

@@ -60,6 +60,12 @@ export MAONLINE_API_KEY=YOUR_API_KEY
 検索時は `--key` → `MAONLINE_API_KEY` → 保存済み設定の順で使用します。空の環境変数は無視します。作業ディレクトリの `.env` も読み込みます。`status` は保存済み設定の登録状態を表示します。
 
 
+通信状況を調べる場合は `-v`、ログを減らす場合は `-q` を指定します。診断ログは標準エラーへ、検索結果のJSONは標準出力へ出力します。
+
+```bash
+maonline -v companies --name ストライク > companies.json
+```
+
 ## ユースケース
 
 以下のレスポンス例は、主要なフィールドと検索結果を抜粋しています。

@@ -131,6 +131,7 @@ impl ApiClient {
         query: &[(&str, String)],
     ) -> Result<T, ApiError> {
         for attempt in 0..self.policy.max_attempts {
+            tracing::debug!(attempt = attempt + 1, "API request started");
             let response = self
                 .http
                 .get(url.clone())
@@ -141,6 +142,7 @@ impl ApiClient {
             let error = match response {
                 Ok(response) => {
                     let status = response.status();
+                    tracing::debug!(status = status.as_u16(), "API response received");
                     if status.is_success() {
                         match response.bytes().await {
                             Ok(body) => {
@@ -162,6 +164,12 @@ impl ApiClient {
                                 self.policy,
                                 SystemTime::now(),
                             );
+                            tracing::warn!(
+                                status = status.as_u16(),
+                                attempt = attempt + 1,
+                                delay_ms = delay.as_millis() as u64,
+                                "retrying API request"
+                            );
                             drop(response);
                             tokio::time::sleep(delay).await;
                             continue;
@@ -174,13 +182,10 @@ impl ApiClient {
             if attempt + 1 == self.policy.max_attempts {
                 return Err(error);
             }
-            tokio::time::sleep(retry_delay(
-                &HeaderMap::new(),
-                attempt,
-                self.policy,
-                SystemTime::now(),
-            ))
-            .await;
+            let delay = retry_delay(&HeaderMap::new(), attempt, self.policy, SystemTime::now());
+            tracing::warn!(kind = ?error.kind, attempt = attempt + 1,
+                delay_ms = delay.as_millis() as u64, "retrying API request");
+            tokio::time::sleep(delay).await;
         }
         unreachable!("request policy always allows at least one attempt")
     }
@@ -195,6 +200,7 @@ impl ApiClient {
         let mut items = Vec::new();
         let mut page = 1;
         loop {
+            tracing::debug!(page, "fetching API page");
             let response = self.get_json(&url, &query(page)).await?;
             let (data, next_page) = unpack(response);
             items.extend(data);

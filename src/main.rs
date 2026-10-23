@@ -6,6 +6,7 @@ mod api_client;
 mod app_config;
 mod app_paths;
 mod companies;
+mod logging;
 mod ma_data;
 mod news;
 
@@ -28,6 +29,12 @@ const HELP_TEMPLATE: &str =
                   各コマンドの詳細は `maonline <COMMAND> --help` で確認できます。"
 )]
 struct Cli {
+    #[arg(short = 'v', long, global = true, action = clap::ArgAction::Count,
+        conflicts_with = "quiet", help = "詳細ログを表示します（-vv で最も詳細）")]
+    verbose: u8,
+    #[arg(short = 'q', long, global = true, action = clap::ArgAction::Count,
+        conflicts_with = "verbose", help = "ログを減らします（-qqq で非表示）")]
+    quiet: u8,
     #[command(subcommand)]
     subcommand: SubCommand,
 }
@@ -81,11 +88,29 @@ enum SubCommand {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> std::process::ExitCode {
     let _ = dotenvy::dotenv();
     let matches = cli_command().get_matches();
-    let cli = Cli::from_arg_matches(&matches)?;
+    let cli = Cli::from_arg_matches(&matches).expect("clap validated the arguments");
+    logging::init(cli.verbose, cli.quiet);
+    match run(cli).await {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(error) => {
+            tracing::error!("{error:#}");
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
 
+async fn run(cli: Cli) -> anyhow::Result<()> {
+    let command = match &cli.subcommand {
+        SubCommand::Companies(_) => "companies",
+        SubCommand::MaData(_) => "ma-data",
+        SubCommand::News(_) => "news",
+        SubCommand::Setup(_) => "setup",
+        SubCommand::Status => "status",
+    };
+    tracing::debug!(command, "command started");
     match cli.subcommand {
         SubCommand::Companies(command) => crate::companies::command::run(command).await?,
         SubCommand::MaData(command) => crate::ma_data::command::run(command).await?,
@@ -94,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
         SubCommand::Status => print_status()?,
     }
 
+    tracing::debug!(command, "command completed");
     Ok(())
 }
 
@@ -182,7 +208,7 @@ mod tests {
         assert!(help.contains("M&A案件を検索します"));
         assert!(help.contains("ニュース・速報を検索・取得します"));
         assert!(!help.contains("検索条件を1つ以上指定してください"));
-        assert!(help.contains("使い方: maonline <COMMAND>"));
+        assert!(help.contains("使い方: maonline [OPTIONS] <COMMAND>"));
         assert!(help.contains("コマンド:"));
         assert!(help.contains("オプション:"));
         assert!(!help.contains("Print help"));
