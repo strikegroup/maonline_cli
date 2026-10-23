@@ -56,4 +56,22 @@ mod tests {
     fn rejects_empty_article_id() {
         assert!(article_url(NEWS_URL.parse().unwrap(), "  ").is_err());
     }
+    #[tokio::test]
+    async fn fetches_and_converts_a_single_article() {
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+        let server = MockServer::start().await;
+        Mock::given(wiremock::matchers::path("/news/sample"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "id":"sample", "title":"記事", "body_html":"<p>本文</p>",
+                "published_at":"2026-10-20", "related_codes":["1234"], "body_raw":"本文"
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let client = crate::api_client::ApiClient::for_test(&format!("{}/", server.uri()));
+        let article = super::request_with_client("sample", &client).await.unwrap();
+        let output = serde_json::to_value(article).unwrap();
+        assert_eq!(output["id"], "sample");
+        assert_eq!(output["body_raw"], "本文");
+    }
 }

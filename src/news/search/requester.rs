@@ -101,4 +101,31 @@ mod tests {
         assert!(pairs.contains(&("with_raw".into(), "true".into())));
         assert!(!url.as_str().contains(' '));
     }
+    #[tokio::test]
+    async fn accepts_an_empty_final_page() {
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+        let server = MockServer::start().await;
+        Mock::given(wiremock::matchers::path("/news/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": [], "meta": {"next_page": null}
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let client = crate::api_client::ApiClient::for_test(&format!("{}/", server.uri()));
+        let parameters = RequestParameters {
+            query: None,
+            company_name: None,
+            article_type: None,
+            date_from: None,
+            date_to: None,
+            with_raw: false,
+        };
+        assert!(
+            super::request_with_client(&parameters, &client)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+    }
 }

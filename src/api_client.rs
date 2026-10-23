@@ -89,6 +89,20 @@ impl ApiClient {
         Self::with_policy(API_BASE, api_key, RequestPolicy::default())
     }
 
+    #[cfg(test)]
+    pub(crate) fn for_test(base: &str) -> Self {
+        Self::with_policy(
+            base,
+            "test-key",
+            RequestPolicy {
+                backoff: Duration::from_millis(1),
+                max_delay: Duration::from_millis(10),
+                ..RequestPolicy::default()
+            },
+        )
+        .unwrap()
+    }
+
     fn with_policy(base: &str, api_key: &str, policy: RequestPolicy) -> anyhow::Result<Self> {
         let mut authorization =
             HeaderValue::from_str(&format!("Bearer {api_key}")).context("invalid API key")?;
@@ -303,5 +317,160 @@ mod tests {
             assert_eq!(status_error(status).kind, kind);
             assert!(!retryable_status(status));
         }
+    }
+    use serde_json::{Value, json};
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn retries_transient_statuses_and_sends_bearer_auth() {
+        for status in [429, 500, 502, 503, 504] {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/news/"))
+                .and(header("authorization", "Bearer test-key"))
+                .respond_with(ResponseTemplate::new(status).insert_header("Retry-After", "0"))
+                .up_to_n_times(1)
+                .with_priority(1)
+                .expect(1)
+                .mount(&server)
+                .await;
+            Mock::given(method("GET"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(json!({"ok":true})))
+                .expect(1)
+                .mount(&server)
+                .await;
+            let client = ApiClient::for_test(&format!("{}/", server.uri()));
+            let result: Value = client
+                .get_json(&client.endpoint("news/"), &[])
+                .await
+                .unwrap();
+            assert_eq!(result, json!({"ok":true}));
+        }
+    }
+
+    #[tokio::test]
+    async fn stops_after_three_retries() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .respond_with(ResponseTemplate::new(503))
+            .expect(4)
+            .mount(&server)
+            .await;
+        let client = ApiClient::for_test(&format!("{}/", server.uri()));
+        let error = client
+            .get_json::<Value>(&client.endpoint("news/"), &[])
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::Server);
+    }
+
+    #[tokio::test]
+    async fn permanent_status_and_malformed_json_fail_without_retries_or_body_disclosure() {
+        for (status, body, kind) in [
+            (401, "secret-key", ErrorKind::Authentication),
+            (403, "secret-key", ErrorKind::Authentication),
+            (404, "secret-key", ErrorKind::NotFound),
+            (501, "secret-key", ErrorKind::Server),
+            (200, "secret-key invalid json", ErrorKind::InvalidResponse),
+        ] {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .respond_with(ResponseTemplate::new(status).set_body_string(body))
+                .expect(1)
+                .mount(&server)
+                .await;
+            let client = ApiClient::for_test(&format!("{}/", server.uri()));
+            let error = client
+                .get_json::<Value>(&client.endpoint("news/"), &[])
+                .await
+                .unwrap_err();
+            assert_eq!(error.kind, kind);
+            assert!(!format!("{error:?} {error}").contains("secret-key"));
+        }
+    }
+
+    #[tokio::test]
+    async fn request_timeout_is_bounded_and_classified() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_delay(Duration::from_millis(500))
+                    .set_body_json(json!({})),
+            )
+            .expect(2)
+            .mount(&server)
+            .await;
+        let client = ApiClient::with_policy(
+            &format!("{}/", server.uri()),
+            "test-key",
+            RequestPolicy {
+                request_timeout: Duration::from_millis(40),
+                max_attempts: 2,
+                backoff: Duration::ZERO,
+                ..RequestPolicy::default()
+            },
+        )
+        .unwrap();
+        let error = client
+            .get_json::<Value>(&client.endpoint("news/"), &[])
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::Timeout);
+    }
+
+    #[derive(serde::Deserialize)]
+    struct Page {
+        data: Vec<u32>,
+        next_page: Option<u32>,
+    }
+
+    #[tokio::test]
+    async fn rejects_non_advancing_pages_and_propagates_later_page_errors() {
+        for next in [0, 1] {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .respond_with(
+                    ResponseTemplate::new(200)
+                        .set_body_json(json!({"data": [1], "next_page": next})),
+                )
+                .expect(1)
+                .mount(&server)
+                .await;
+            let client = ApiClient::for_test(&format!("{}/", server.uri()));
+            let error = client
+                .get_pages::<Page, _>(
+                    "news/",
+                    |page| vec![("page", page.to_string())],
+                    |page| (page.data, page.next_page),
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(error.kind, ErrorKind::InvalidPagination);
+        }
+        let server = MockServer::start().await;
+        Mock::given(wiremock::matchers::query_param("page", "1"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(json!({"data":[1],"next_page":2})),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+        Mock::given(wiremock::matchers::query_param("page", "2"))
+            .respond_with(ResponseTemplate::new(401))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let client = ApiClient::for_test(&format!("{}/", server.uri()));
+        let error = client
+            .get_pages::<Page, _>(
+                "news/",
+                |page| vec![("page", page.to_string())],
+                |page| (page.data, page.next_page),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::Authentication);
     }
 }

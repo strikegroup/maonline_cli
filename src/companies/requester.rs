@@ -90,4 +90,36 @@ mod tests {
         assert!(pairs.contains(&("name".into(), "サンプル 株式会社".into())));
         assert!(!url.as_str().contains(' '));
     }
+    #[tokio::test]
+    async fn fetches_all_pages_with_filters_and_converts_company_models() {
+        use serde_json::json;
+        use wiremock::matchers::{header, method, path, query_param};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+        let server = MockServer::start().await;
+        for (page, next, name) in [(1, Some(3), "企業A"), (3, None, "企業B")] {
+            Mock::given(method("GET")).and(path("/companies/"))
+                .and(header("authorization", "Bearer test-key"))
+                .and(query_param("page", page.to_string()))
+                .and(query_param("per_page", "200"))
+                .and(query_param("name", "企業 & 検索"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                    "data": [{"edsyokencode":"1234","edcode":"E01234","edname":name,
+                        "market":"東証プライム","address":"東京都","homepage":"https://example.com"}],
+                    "meta":{"next_page":next}
+                }))).expect(1).mount(&server).await;
+        }
+        let client = crate::api_client::ApiClient::for_test(&format!("{}/", server.uri()));
+        let parameters = RequestParameters {
+            sec_code: None,
+            edinet_code: None,
+            company_name: Some("企業 & 検索".into()),
+            market: None,
+        };
+        let result = super::request_with_client(&parameters, &client)
+            .await
+            .unwrap();
+        let output = serde_json::to_value(result).unwrap();
+        assert_eq!(output[0]["company_name"], "企業A");
+        assert_eq!(output[1]["company_name"], "企業B");
+    }
 }
