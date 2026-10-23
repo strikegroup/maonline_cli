@@ -94,7 +94,7 @@ pub fn load_api_key() -> anyhow::Result<String> {
     let config_path = crate::app_paths::config_file_path()?;
     let content = std::fs::read_to_string(&config_path).with_context(|| {
         format!(
-            "failed to read config file {}. run `cargo run -- setup --key <MAONLINE_API_KEY>` first or pass `--key`",
+            "failed to read config file {}. run `maonline setup --key <MAONLINE_API_KEY>`, set `MAONLINE_API_KEY`, or pass `--key`",
             config_path.display()
         )
     })?;
@@ -111,11 +111,17 @@ pub fn load_api_key() -> anyhow::Result<String> {
     Ok(api_key.to_owned())
 }
 
-/// 実行時 API キーを解決する。
-///
-/// - `cli_api_key` が指定されていればそれを優先
-/// - 未指定なら `config.toml` の保存済みキーを利用
+/// `--key` → `MAONLINE_API_KEY` → `config.toml` の順でAPIキーを解決する。
 pub fn resolve_api_key(cli_api_key: Option<&str>) -> anyhow::Result<String> {
+    let env_api_key = std::env::var("MAONLINE_API_KEY").ok();
+    resolve_api_key_from_sources(cli_api_key, env_api_key.as_deref(), load_api_key)
+}
+
+fn resolve_api_key_from_sources(
+    cli_api_key: Option<&str>,
+    env_api_key: Option<&str>,
+    load_saved_key: impl FnOnce() -> anyhow::Result<String>,
+) -> anyhow::Result<String> {
     if let Some(api_key) = cli_api_key {
         let api_key = api_key.trim();
         if api_key.is_empty() {
@@ -123,8 +129,10 @@ pub fn resolve_api_key(cli_api_key: Option<&str>) -> anyhow::Result<String> {
         }
         return Ok(api_key.to_owned());
     }
-
-    load_api_key()
+    if let Some(api_key) = env_api_key.map(str::trim).filter(|key| !key.is_empty()) {
+        return Ok(api_key.to_owned());
+    }
+    load_saved_key()
 }
 
 pub fn run_setup(args: SetupArgs) -> anyhow::Result<()> {
@@ -198,6 +206,28 @@ mod tests {
         assert_eq!(
             output.matches("Do you agree to the terms? [y/N]: ").count(),
             2
+        );
+    }
+    #[test]
+    fn api_key_precedence_is_cli_then_environment_then_saved_config() {
+        let unused = || -> anyhow::Result<String> { panic!("config must not be read") };
+        assert_eq!(
+            resolve_api_key_from_sources(Some(" cli "), Some("env"), unused).unwrap(),
+            "cli"
+        );
+        assert_eq!(
+            resolve_api_key_from_sources(None, Some(" env "), unused).unwrap(),
+            "env"
+        );
+        assert!(resolve_api_key_from_sources(Some(" "), Some("env"), unused).is_err());
+        for env in [None, Some(""), Some(" ")] {
+            assert_eq!(
+                resolve_api_key_from_sources(None, env, || Ok("saved".into())).unwrap(),
+                "saved"
+            );
+        }
+        assert!(
+            resolve_api_key_from_sources(None, None, || anyhow::bail!("missing config")).is_err()
         );
     }
 }

@@ -51,6 +51,15 @@ M&A Online の管理者から API キーを取得し、最初に登録します�
 maonline setup --key YOUR_API_KEY
 ```
 
+環境変数で指定することもできます。
+
+```bash
+export MAONLINE_API_KEY=YOUR_API_KEY
+```
+
+検索時は `--key` → `MAONLINE_API_KEY` → 保存済み設定の順で使用します。空の環境変数は無視します。作業ディレクトリの `.env` も読み込みます。`status` は保存済み設定の登録状態を表示します。
+
+
 ## ユースケース
 
 以下のレスポンス例は、主要なフィールドと検索結果を抜粋しています。

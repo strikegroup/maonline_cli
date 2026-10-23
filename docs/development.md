@@ -27,7 +27,7 @@ cargo run -- setup --key <YOUR_MAONLINE_API_KEY>
 cargo run -- status
 ```
 
-検索コマンドの `--key` を指定した場合は、保存済みの API キーより優先されます。
+検索時の API キーは `--key` → 環境変数 `MAONLINE_API_KEY` → `config.toml` の順で解決します。空の環境変数は無視します。作業ディレクトリの `.env` も読み込みます。必要なら `.env.example` をコピーして設定してください（`.env` はGit管理対象外です）。`setup` は明示的なキー指定と利用特約への同意を必要とします。
 
 ### 4. 基本チェックを実行する
 
