@@ -2,52 +2,33 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Context;
+use crate::api_client::ApiClient;
 
 use crate::news::{article::NewsArticle, raw_response::RawNewsArticle};
 
+#[cfg(test)]
 const NEWS_URL: &str = "https://maonline.jp/research/api/v1/news/";
 
 pub(super) async fn request_news_article(
     article_id: &str,
     api_key: &str,
 ) -> anyhow::Result<NewsArticle> {
-    let url = article_url(article_id)?;
-    let client = reqwest::Client::new();
-    let response = client
-        .get(url.clone())
-        .bearer_auth(api_key)
-        .send()
-        .await
-        .with_context(|| format!("failed to send request to {url}"))?;
-    let status = response.status();
+    let client = ApiClient::new(api_key)?;
+    request_with_client(article_id, &client).await
+}
 
-    if !status.is_success() {
-        return Err(anyhow::anyhow!(
-            "request to {} failed with status {}",
-            url,
-            status
-        ));
-    }
-
-    let body = response
-        .bytes()
-        .await
-        .with_context(|| format!("failed to read response body from {url}"))?;
-
-    let raw_article: RawNewsArticle = serde_json::from_slice(&body)
-        .with_context(|| format!("failed to parse response from {url}"))?;
-
+async fn request_with_client(article_id: &str, client: &ApiClient) -> anyhow::Result<NewsArticle> {
+    let url = article_url(client.endpoint("news/"), article_id)?;
+    let raw_article: RawNewsArticle = client.get_json(&url, &[]).await?;
     Ok(NewsArticle::from(raw_article))
 }
 
-fn article_url(article_id: &str) -> anyhow::Result<reqwest::Url> {
+fn article_url(mut url: reqwest::Url, article_id: &str) -> anyhow::Result<reqwest::Url> {
     let article_id = article_id.trim();
     if article_id.is_empty() {
         return Err(anyhow::anyhow!("article id must not be empty"));
     }
 
-    let mut url = reqwest::Url::parse(NEWS_URL).context("invalid news API URL")?;
     url.path_segments_mut()
         .map_err(|_| anyhow::anyhow!("news API URL cannot be a base URL"))?
         .pop_if_empty()
@@ -58,11 +39,12 @@ fn article_url(article_id: &str) -> anyhow::Result<reqwest::Url> {
 
 #[cfg(test)]
 mod tests {
-    use super::article_url;
+    use super::{NEWS_URL, article_url};
 
     #[test]
     fn url_encodes_url_style_article_id_as_one_path_parameter() {
-        let url = article_url("news/20240520_sample").expect("URL must be buildable");
+        let url = article_url(NEWS_URL.parse().unwrap(), "news/20240520_sample")
+            .expect("URL must be buildable");
 
         assert_eq!(
             url.as_str(),
@@ -72,6 +54,6 @@ mod tests {
 
     #[test]
     fn rejects_empty_article_id() {
-        assert!(article_url("  ").is_err());
+        assert!(article_url(NEWS_URL.parse().unwrap(), "  ").is_err());
     }
 }

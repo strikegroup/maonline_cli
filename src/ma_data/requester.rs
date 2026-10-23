@@ -2,10 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Context;
+use crate::api_client::ApiClient;
 
 use super::{data::MaData, raw_response::RawResponse};
 
+#[cfg(test)]
 const MA_DATA_URL: &str = "https://maonline.jp/research/api/v1/ma_data/";
 const PER_PAGE: u32 = 200;
 
@@ -22,52 +23,22 @@ pub(super) async fn request_ma_data(
     parameters: &RequestParameters,
     api_key: &str,
 ) -> anyhow::Result<Vec<MaData>> {
-    let client = reqwest::Client::new();
-    let response = request_raw_ma_data(&client, parameters, api_key, 1).await?;
-
-    Ok(response.data.into_iter().map(MaData::from).collect())
+    let client = ApiClient::new(api_key)?;
+    request_with_client(parameters, &client).await
 }
 
-#[async_recursion::async_recursion]
-async fn request_raw_ma_data(
-    client: &reqwest::Client,
+async fn request_with_client(
     parameters: &RequestParameters,
-    api_key: &str,
-    page: u32,
-) -> anyhow::Result<RawResponse> {
-    let request = client
-        .get(MA_DATA_URL)
-        .query(&query_parameters(parameters, page))
-        .bearer_auth(api_key)
-        .build()
-        .context("failed to build M&A data API request")?;
-    let url = request.url().clone();
-    let response = client
-        .execute(request)
-        .await
-        .with_context(|| format!("failed to send request to {url}"))?;
-    let status = response.status();
-
-    if !status.is_success() {
-        return Err(anyhow::anyhow!(
-            "request to {url} failed with status {status}"
-        ));
-    }
-
-    let body = response
-        .bytes()
-        .await
-        .with_context(|| format!("failed to read response body from {url}"))?;
-    let mut raw_response: RawResponse = serde_json::from_slice(&body)
-        .with_context(|| format!("failed to parse response from {url}"))?;
-
-    if let Some(next_page) = raw_response.meta.next_page {
-        let next_response = request_raw_ma_data(client, parameters, api_key, next_page).await?;
-        raw_response.data.extend(next_response.data);
-        raw_response.meta = next_response.meta;
-    }
-
-    Ok(raw_response)
+    client: &ApiClient,
+) -> anyhow::Result<Vec<MaData>> {
+    let data = client
+        .get_pages::<RawResponse, _>(
+            "ma_data/",
+            |page| query_parameters(parameters, page),
+            |response| (response.data, response.meta.next_page),
+        )
+        .await?;
+    Ok(data.into_iter().map(MaData::from).collect())
 }
 
 fn query_parameters(parameters: &RequestParameters, page: u32) -> Vec<(&'static str, String)> {

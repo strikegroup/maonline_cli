@@ -63,6 +63,7 @@ cargo run -- news search ストライク
 ├── docs/
 │   └── development.md
 ├── src/
+│   ├── api_client.rs
 │   ├── app_config.rs
 │   ├── app_paths.rs
 │   ├── main.rs
@@ -77,6 +78,7 @@ cargo run -- news search ストライク
 主な責務は次の通りです。
 
 - `src/main.rs`: CLI のサブコマンド、ヘルプ、実行フローを定義します。
+- `src/api_client.rs`: 共通HTTPクライアント、タイムアウト、再試行、ページ取得を担当します。
 - `src/app_config.rs`: API キーの保存、読込、解決を担当します。
 - `src/app_paths.rs`: OS 標準の設定・データ保存先を解決します。
 - `src/companies/`: 企業情報の検索と出力モデルへの変換を担当します。
@@ -86,6 +88,8 @@ cargo run -- news search ストライク
 ## API クライアントの構成
 
 各機能は、CLI 引数と実行処理を持つ `command.rs`、HTTP 通信を行う `requester.rs`、API レスポンスを表す `raw_response.rs`、外部出力用モデルに分かれています。
+
+HTTP 通信は `api_client.rs` に集約しています。接続タイムアウトは5秒、1リクエストは30秒です。通信失敗と HTTP 429・500・502・503・504 は最大3回再試行します。待機は指数バックオフと `Retry-After`（秒数またはHTTP日時）に対応し、1回あたり最大30秒です。認証失敗や不正なJSONは再試行せず、エラーを分類して返します。
 
 API キーは Bearer 認証として送信します。企業情報、M&A 案件、ニュース検索は1ページ200件で取得し、`next_page` がある間は後続ページを結合します。出力は標準出力へ整形済み JSON として書き出し、エラーは `anyhow` のコンテキストを付けて呼び出し元へ返します。
 
