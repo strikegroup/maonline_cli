@@ -45,6 +45,12 @@ cargo run -- setup --help
 cargo run -- status --help
 ```
 
+公開処理のテストにはNode.js 24も使用します。
+
+```bash
+node --test .github/scripts/publish.test.mjs
+```
+
 通常のテストは外部 API に接続しません。登録済み API キーを使う疎通確認は個別に実行します。
 
 ```bash
@@ -140,6 +146,10 @@ dist plan
 ```
 
 `.github/workflows/release.yml` と `strikegroup/homebrew-tap` の Formula は生成物です。通常は手作業で編集しません。
+
+Homebrew と npm の公開は、それぞれ `publish-homebrew.yml`、`publish-npm.yml` から `.github/scripts/publish.mjs` を実行します。Homebrew は整形後のFormulaに差分がなければコミット・pushを省略します。npm は `npm pack --dry-run` で得た配布内容のintegrityをレジストリと比較し、同一の公開済みバージョンなら省略します。同一バージョンのチェックサムが異なる場合（Homebrew・npm）、またはnpmの認証・通信確認に失敗した場合は停止します。これにより、公開処理の一部が失敗した場合も同じリリースを再実行できます。
+
+Homebrewを独自の公開ジョブに置き換えているため、`dist generate` は組み込みHomebrew公開ジョブが無効という警告を出します。`tap` はFormulaの生成に必要な設定として残しています。生成されたワークフローの `custom-publish-homebrew` が呼び出されることを確認してください。
 
 リリースには、GitHub Actions の次のSecretを使用します。
 

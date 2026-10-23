@@ -9,6 +9,7 @@ on:
         type: string
 
 permissions:
+  contents: read
   id-token: write
 
 jobs:
@@ -19,6 +20,9 @@ jobs:
       PLAN: ${{ inputs.plan }}
 
     steps:
+      - name: Checkout publisher
+        uses: actions/checkout@v6
+
       - name: Download npm packages
         uses: actions/download-artifact@v8
         with:
@@ -35,18 +39,4 @@ jobs:
 
       - name: Publish npm packages
         shell: bash
-        run: |
-          mapfile -t packages < <(
-            jq --raw-output \
-              '.releases[].artifacts[] | select(endswith("-npm-package.tar.gz"))' \
-              <<<"$PLAN"
-          )
-
-          if (( ${#packages[@]} == 0 )); then
-            echo "No npm package was found in the cargo-dist release plan." >&2
-            exit 1
-          fi
-
-          for package in "${packages[@]}"; do
-            npm publish --access public "./npm/${package}"
-          done
+        run: node .github/scripts/publish.mjs npm npm

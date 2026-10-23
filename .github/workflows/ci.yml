@@ -26,6 +26,15 @@ jobs:
           rustup default stable
           rustup component add rustfmt
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Test release publishers
+        run: node --test .github/scripts/publish.test.mjs
+
       - name: Check formatting
         run: cargo fmt --check
 
