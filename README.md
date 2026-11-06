@@ -299,6 +299,8 @@ maonline news search --help
 | `-m, --market MARKET` | 市場区分で絞り込み |
 | `-k, --key API_KEY` | API キーを明示的に指定する場合 |
 
+検索文字列の前後の空白は除去します。空白だけの条件は指定できません。証券コードは4文字の半角英数字、EDINETコードは `E` と5桁の数字で指定します。コードの英字は大文字に揃えます。
+
 ### `ma-data`
 
 企業名、買収金額、スキーム、国内外区分、エリアを組み合わせてM&A案件を絞り込みます。
@@ -312,6 +314,8 @@ maonline news search --help
 | `-i, --inout CATEGORY` | 国内外区分で絞り込み |
 | `-a, --area AREA` | 対象エリア名で絞り込み |
 | `-k, --key API_KEY` | API キーを明示的に指定する場合 |
+
+買収金額は下限が上限以下になるよう指定します。
 
 ### `news search`（短縮形: `news s`）
 
@@ -331,6 +335,8 @@ maonline news --key API_KEY search QUERY
 | `-f, --date-from YYYY-MM-DD` | 指定日以降に公開された記事へ絞り込み |
 | `-t, --date-to YYYY-MM-DD` | 指定日以前に公開された記事へ絞り込み |
 | `-w, --with-raw` | 解析前の本文を `body_raw` として出力 |
+
+日付は実在する日を `YYYY-MM-DD` で指定します。開始日は終了日以前にしてください。
 
 記事種別には次の値を指定できます。
 

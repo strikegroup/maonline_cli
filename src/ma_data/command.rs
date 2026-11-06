@@ -10,7 +10,8 @@ pub struct MaDataArgs {
         long = "company",
         short = 'c',
         value_name = "COMPANY_NAME",
-        help = "買い手・対象・売り手の企業名で曖昧検索します"
+        help = "買い手・対象・売り手の企業名で曖昧検索します",
+        value_parser = crate::input::non_empty
     )]
     company_name: Option<String>,
     #[arg(long, value_name = "YEN", help = "買収金額の下限を円単位で指定します")]
@@ -21,21 +22,24 @@ pub struct MaDataArgs {
         long,
         short,
         value_name = "CODE",
-        help = "M&Aスキームコードで絞り込みます"
+        help = "M&Aスキームコードで絞り込みます",
+        value_parser = crate::input::non_empty
     )]
     scheme: Option<String>,
     #[arg(
         long,
         short,
         value_name = "CATEGORY",
-        help = "国内外区分で絞り込みます（例: IN-IN、IN-OUT）"
+        help = "国内外区分で絞り込みます（例: IN-IN、IN-OUT）",
+        value_parser = crate::input::non_empty
     )]
     inout: Option<String>,
     #[arg(
         long,
         short,
         value_name = "AREA",
-        help = "対象エリア名で絞り込みます（例: 東京都）"
+        help = "対象エリア名で絞り込みます（例: 東京都）",
+        value_parser = crate::input::non_empty
     )]
     area: Option<String>,
     #[arg(
@@ -48,6 +52,12 @@ pub struct MaDataArgs {
 }
 
 pub async fn run(args: MaDataArgs) -> anyhow::Result<()> {
+    if let (Some(min), Some(max)) = (args.min_price, args.max_price) {
+        anyhow::ensure!(
+            min <= max,
+            "--min-price must be less than or equal to --max-price"
+        );
+    }
     let api_key = crate::app_config::resolve_api_key(args.key.as_deref())
         .context("failed to resolve M&A Online API key")?;
 

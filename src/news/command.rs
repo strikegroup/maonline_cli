@@ -41,6 +41,9 @@ enum NewsSubCommand {
 }
 
 pub async fn run(args: NewsArgs) -> anyhow::Result<()> {
+    if let NewsSubCommand::Search(command) = &args.subcommand {
+        command.validate()?;
+    }
     let api_key = crate::app_config::resolve_api_key(args.key.as_deref())
         .context("failed to resolve M&A Online API key")?;
 

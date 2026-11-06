@@ -6,6 +6,7 @@ mod api_client;
 mod app_config;
 mod app_paths;
 mod companies;
+mod input;
 mod logging;
 mod ma_data;
 mod news;

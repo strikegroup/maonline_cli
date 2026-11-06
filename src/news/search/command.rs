@@ -13,14 +13,16 @@ use crate::news::{
 pub(in crate::news) struct SearchNewsArgs {
     #[arg(
         value_name = "QUERY",
-        help = "タイトル、本文、タグを対象にキーワード検索します"
+        help = "タイトル、本文、タグを対象にキーワード検索します",
+        value_parser = crate::input::non_empty
     )]
     query: Option<String>,
     #[arg(
         long = "company",
         short = 'c',
         value_name = "COMPANY_NAME",
-        help = "関連企業名で絞り込みます"
+        help = "関連企業名で絞り込みます",
+        value_parser = crate::input::non_empty
     )]
     company_name: Option<String>,
     #[arg(
@@ -35,18 +37,32 @@ pub(in crate::news) struct SearchNewsArgs {
         long,
         short = 'f',
         value_name = "YYYY-MM-DD",
-        help = "この日以降に公開された記事へ絞り込みます"
+        help = "この日以降に公開された記事へ絞り込みます",
+        value_parser = crate::input::date
     )]
     date_from: Option<String>,
     #[arg(
         long,
         short = 't',
         value_name = "YYYY-MM-DD",
-        help = "この日以前に公開された記事へ絞り込みます"
+        help = "この日以前に公開された記事へ絞り込みます",
+        value_parser = crate::input::date
     )]
     date_to: Option<String>,
     #[arg(long, short, help = "解析前の本文を `body_raw` として出力します")]
     with_raw: bool,
+}
+
+impl SearchNewsArgs {
+    pub(in crate::news) fn validate(&self) -> anyhow::Result<()> {
+        if let (Some(from), Some(to)) = (&self.date_from, &self.date_to) {
+            anyhow::ensure!(
+                from <= to,
+                "--date-from must be earlier than or equal to --date-to"
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(clap::ValueEnum, Debug, Clone)]

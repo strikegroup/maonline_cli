@@ -8,7 +8,7 @@ use crate::news::get::requester::request_news_article;
 
 #[derive(clap::Args, Debug)]
 pub(in crate::news) struct GetNewsArgs {
-    #[arg(value_name = "ARTICLE_ID", help = "取得する記事の記事ID")]
+    #[arg(value_name = "ARTICLE_ID", help = "取得する記事の記事ID", value_parser = crate::input::non_empty)]
     article_id: String,
 }
 

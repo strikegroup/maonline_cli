@@ -12,28 +12,32 @@ pub struct CompaniesArgs {
         long,
         short,
         value_name = "SEC_CODE",
-        help = "証券コードで完全一致検索します"
+        help = "証券コードで完全一致検索します",
+        value_parser = crate::input::sec_code
     )]
     sec_code: Option<String>,
     #[arg(
         long = "name",
         short = 'n',
         value_name = "COMPANY_NAME",
-        help = "企業名またはカナで曖昧検索します"
+        help = "企業名またはカナで曖昧検索します",
+        value_parser = crate::input::non_empty
     )]
     company_name: Option<String>,
     #[arg(
         long,
         short,
         value_name = "EDINET_CODE",
-        help = "EDINETコードで完全一致検索します"
+        help = "EDINETコードで完全一致検索します",
+        value_parser = crate::input::edinet_code
     )]
     edinet_code: Option<String>,
     #[arg(
         long,
         short,
         value_name = "MARKET",
-        help = "市場区分で絞り込みます（例: 東証プライム）"
+        help = "市場区分で絞り込みます（例: 東証プライム）",
+        value_parser = crate::input::non_empty
     )]
     market: Option<String>,
     #[arg(
