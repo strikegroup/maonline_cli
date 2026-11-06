@@ -8,9 +8,9 @@ use super::{data::MaData, raw_response::RawResponse};
 
 #[cfg(test)]
 const MA_DATA_URL: &str = "https://maonline.jp/research/api/v1/ma_data/";
-const PER_PAGE: u32 = 200;
 
 pub(super) struct RequestParameters {
+    pub(super) pagination: crate::pagination::Pagination,
     pub(super) company_name: Option<String>,
     pub(super) min_price: Option<u64>,
     pub(super) max_price: Option<u64>,
@@ -34,6 +34,7 @@ async fn request_with_client(
     let data = client
         .get_pages::<RawResponse, _>(
             "ma_data/",
+            parameters.pagination,
             |page| query_parameters(parameters, page),
             |response| (response.data, response.meta.next_page),
         )
@@ -44,7 +45,7 @@ async fn request_with_client(
 fn query_parameters(parameters: &RequestParameters, page: u32) -> Vec<(&'static str, String)> {
     let mut query = vec![
         ("page", page.to_string()),
-        ("per_page", PER_PAGE.to_string()),
+        ("per_page", parameters.pagination.per_page().to_string()),
     ];
 
     if let Some(value) = &parameters.company_name {
@@ -76,6 +77,7 @@ mod tests {
     #[test]
     fn builds_encoded_ma_data_request_url() {
         let parameters = RequestParameters {
+            pagination: Default::default(),
             company_name: Some("サンプル 株式会社".to_owned()),
             min_price: Some(10_000_000_000),
             max_price: Some(20_000_000_000),
@@ -114,6 +116,7 @@ mod tests {
             .await;
         let client = crate::api_client::ApiClient::for_test(&format!("{}/", server.uri()));
         let parameters = RequestParameters {
+            pagination: Default::default(),
             company_name: None,
             min_price: None,
             max_price: None,
@@ -127,5 +130,69 @@ mod tests {
                 .unwrap()
                 .is_empty()
         );
+    }
+    #[tokio::test]
+    async fn fetches_only_the_selected_page_including_partial_and_empty_pages() {
+        use wiremock::matchers::{method, path, query_param};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+        for (page, count) in [(1, 2), (3, 1), (9, 0)] {
+            let server = MockServer::start().await;
+            let sample = serde_json::json!({
+                "disdate": "2026-01-01",
+                "title": "案件",
+                "price": null,
+                "total": null,
+                "maoscheme": "4",
+                "maoschemename": "株式譲渡",
+                "maoschemesub": "",
+                "maoschemesubname": "",
+                "inout": "IN-IN",
+                "gyosyudiff": "",
+                "buyer_info": {
+                    "name": "",
+                    "code": "",
+                    "industry": "",
+                    "area": ""
+                },
+                "target_info": {
+                    "name": "",
+                    "code": "",
+                    "industry": "",
+                    "area": ""
+                },
+                "seller_info": {
+                    "name": "",
+                    "code": "",
+                    "industry": "",
+                    "area": ""
+                }
+            });
+            let data = vec![sample; count];
+            Mock::given(method("GET"))
+                .and(path("/ma_data/"))
+                .and(query_param("page", page.to_string()))
+                .and(query_param("per_page", "2"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "data": data, "meta": {"next_page": page + 1}
+                })))
+                .expect(1)
+                .mount(&server)
+                .await;
+            let client = crate::api_client::ApiClient::for_test(&format!("{}/", server.uri()));
+            let parameters = RequestParameters {
+                pagination: crate::pagination::Pagination { limit: 2, page },
+                company_name: None,
+                min_price: None,
+                max_price: None,
+                scheme: None,
+                inout: None,
+                area: None,
+            };
+            let result = super::request_with_client(&parameters, &client)
+                .await
+                .unwrap();
+            assert_eq!(result.len(), count);
+            assert_eq!(server.received_requests().await.unwrap().len(), 1);
+        }
     }
 }

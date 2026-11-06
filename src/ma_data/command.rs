@@ -6,6 +6,8 @@ use anyhow::Context;
 
 #[derive(clap::Args, Debug)]
 pub struct MaDataArgs {
+    #[command(flatten)]
+    pagination: crate::pagination::Pagination,
     #[arg(
         long = "company",
         short = 'c',
@@ -52,6 +54,7 @@ pub struct MaDataArgs {
 }
 
 pub async fn run(args: MaDataArgs) -> anyhow::Result<()> {
+    args.pagination.validate()?;
     if let (Some(min), Some(max)) = (args.min_price, args.max_price) {
         anyhow::ensure!(
             min <= max,
@@ -62,6 +65,7 @@ pub async fn run(args: MaDataArgs) -> anyhow::Result<()> {
         .context("failed to resolve M&A Online API key")?;
 
     let parameters = crate::ma_data::requester::RequestParameters {
+        pagination: args.pagination,
         company_name: args.company_name,
         min_price: args.min_price,
         max_price: args.max_price,

@@ -193,17 +193,22 @@ impl ApiClient {
     pub(crate) async fn get_pages<R: DeserializeOwned, T>(
         &self,
         path: &str,
+        pagination: crate::pagination::Pagination,
         query: impl Fn(u32) -> Vec<(&'static str, String)>,
         unpack: impl Fn(R) -> (Vec<T>, Option<u32>),
     ) -> Result<Vec<T>, ApiError> {
         let url = self.endpoint(path);
         let mut items = Vec::new();
-        let mut page = 1;
+        let mut page = pagination.page;
         loop {
             tracing::debug!(page, "fetching API page");
             let response = self.get_json(&url, &query(page)).await?;
             let (data, next_page) = unpack(response);
             items.extend(data);
+            if pagination.limit > 0 {
+                items.truncate(pagination.limit as usize);
+                return Ok(items);
+            }
             match next_page {
                 None => return Ok(items),
                 Some(next) if next > page => page = next,
@@ -448,6 +453,7 @@ mod tests {
             let error = client
                 .get_pages::<Page, _>(
                     "news/",
+                    Default::default(),
                     |page| vec![("page", page.to_string())],
                     |page| (page.data, page.next_page),
                 )
@@ -472,6 +478,7 @@ mod tests {
         let error = client
             .get_pages::<Page, _>(
                 "news/",
+                Default::default(),
                 |page| vec![("page", page.to_string())],
                 |page| (page.data, page.next_page),
             )

@@ -10,6 +10,7 @@ mod input;
 mod logging;
 mod ma_data;
 mod news;
+mod pagination;
 
 use clap::{Command, CommandFactory, FromArgMatches, Parser};
 
@@ -281,6 +282,23 @@ mod tests {
                 "help output differs for `{}`",
                 command.join(" ")
             );
+        }
+    }
+    #[test]
+    fn search_commands_accept_pagination_and_short_options() {
+        for prefix in [
+            vec!["maonline", "companies", "--name", "企業"],
+            vec!["maonline", "ma-data"],
+            vec!["maonline", "news", "search"],
+        ] {
+            for options in [
+                vec!["--limit", "20", "--page", "2"],
+                vec!["-l", "200", "-p", "3"],
+                vec!["--limit", "0"],
+            ] {
+                let args: Vec<_> = prefix.iter().chain(&options).copied().collect();
+                cli_command().try_get_matches_from(args).unwrap();
+            }
         }
     }
 }

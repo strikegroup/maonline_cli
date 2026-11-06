@@ -49,3 +49,29 @@ fn rejects_invalid_search_inputs_before_resolving_credentials() {
         assert!(stderr.contains(message), "{args:?}: {stderr}");
     }
 }
+
+#[test]
+fn rejects_invalid_pagination_on_every_search_command() {
+    for prefix in [
+        vec!["companies", "--name", "企業"],
+        vec!["ma-data"],
+        vec!["news", "search"],
+    ] {
+        for (options, message) in [
+            (vec!["--page", "0"], "invalid value"),
+            (vec!["--limit", "201"], "invalid value"),
+            (vec!["--page", "2"], "requires --limit"),
+            (vec!["--limit", "0", "--page", "2"], "requires --limit"),
+        ] {
+            let output = Command::new(env!("CARGO_BIN_EXE_maonline"))
+                .args(&prefix)
+                .args(&options)
+                .output()
+                .unwrap();
+            assert!(!output.status.success());
+            assert!(output.stdout.is_empty());
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            assert!(stderr.contains(message), "{prefix:?} {options:?}: {stderr}");
+        }
+    }
+}

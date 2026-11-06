@@ -8,6 +8,8 @@ use crate::companies::requester::{RequestParameters, request_company_info};
 
 #[derive(Debug, clap::Args)]
 pub struct CompaniesArgs {
+    #[command(flatten)]
+    pagination: crate::pagination::Pagination,
     #[arg(
         long,
         short,
@@ -50,7 +52,9 @@ pub struct CompaniesArgs {
 }
 
 pub async fn run(args: CompaniesArgs) -> anyhow::Result<()> {
+    args.pagination.validate()?;
     let parameters: RequestParameters = RequestParameters {
+        pagination: args.pagination,
         sec_code: args.sec_code,
         company_name: args.company_name,
         edinet_code: args.edinet_code,

@@ -11,6 +11,8 @@ use crate::news::{
 
 #[derive(clap::Args, Debug)]
 pub(in crate::news) struct SearchNewsArgs {
+    #[command(flatten)]
+    pagination: crate::pagination::Pagination,
     #[arg(
         value_name = "QUERY",
         help = "タイトル、本文、タグを対象にキーワード検索します",
@@ -55,6 +57,7 @@ pub(in crate::news) struct SearchNewsArgs {
 
 impl SearchNewsArgs {
     pub(in crate::news) fn validate(&self) -> anyhow::Result<()> {
+        self.pagination.validate()?;
         if let (Some(from), Some(to)) = (&self.date_from, &self.date_to) {
             anyhow::ensure!(
                 from <= to,
@@ -90,6 +93,7 @@ impl From<CliArticleType> for ArticleType {
 
 pub(in crate::news) async fn run(args: SearchNewsArgs, api_key: &str) -> anyhow::Result<()> {
     let parameters = RequestParameters {
+        pagination: args.pagination,
         query: args.query,
         company_name: args.company_name,
         article_type: args.article_type.map(ArticleType::from),

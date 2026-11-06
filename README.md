@@ -287,6 +287,23 @@ maonline ma-data --help
 maonline news search --help
 ```
 
+### 検索結果の件数・ページ指定
+
+`companies`、`ma-data`、`news search` では、次の共通オプションを使えます。
+
+| オプション | 内容 |
+|---|---|
+| `-l, --limit COUNT` | 1ページの取得件数（1〜200）。未指定または `0` は全件取得 |
+| `-p, --page PAGE` | 取得するページ番号（1以上、既定は1） |
+
+`--limit` が1以上の場合は指定ページだけを取得し、後続ページは取得しません。`--limit` が未指定または `0` の場合、`--page` は1のみ指定できます。出力は従来どおりJSON配列です。
+
+```bash
+maonline companies --name トヨタ --limit 10
+maonline ma-data --company 楽天 --limit 20 --page 2
+maonline news search TOB -l 20 -p 2
+```
+
 ### `companies`
 
 証券コード、企業名、EDINETコード、市場区分のうち、1つ以上を指定します。複数指定した場合は、すべての条件で絞り込みます。
