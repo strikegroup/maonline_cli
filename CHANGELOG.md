@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.4](https://github.com/strikegroup/maonline_cli/compare/v0.0.3...v0.0.4) - 2026-11-06
+
+### Added
+
+- 検索結果の件数とページ指定を追加
+- 検索条件の入力検証と正規化を追加
+
+### Other
+
+- edinet_cliに合わせたmise開発環境設定を追加
+
 ## [0.0.3](https://github.com/strikegroup/maonline_cli/compare/v0.0.2...v0.0.3) - 2026-10-23
 
 ### Added
