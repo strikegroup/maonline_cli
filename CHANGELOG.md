@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.6](https://github.com/strikegroup/maonline_cli/compare/v0.0.5...v0.0.6) - 2026-11-24
+
+### Fixed
+
+- Apple Silicon向けリリースランナーをmacos-15に変更
+
 ## [0.0.5](https://github.com/strikegroup/maonline_cli/compare/v0.0.4...v0.0.5) - 2026-11-24
 
 ### Added
