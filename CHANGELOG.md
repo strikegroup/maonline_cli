@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.5](https://github.com/strikegroup/maonline_cli/compare/v0.0.4...v0.0.5) - 2026-11-24
+
+### Added
+
+- companiesとnewsを削除してM&A案件検索に集約
+
+### Other
+
+- 旧機能の痕跡と変更経緯の表現を整理
+
 ## [0.0.4](https://github.com/strikegroup/maonline_cli/compare/v0.0.3...v0.0.4) - 2026-11-06
 
 ### Added
