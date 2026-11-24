@@ -39,6 +39,8 @@ ci = "github"
 installers = ["homebrew", "npm"]
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+# macos-14 was retired; override cargo-dist 0.32.0's Apple Silicon default.
+github-custom-runners = { aarch64-apple-darwin = "macos-15" }
 # A GitHub repo to push Homebrew formulas to
 tap = "strikegroup/homebrew-tap"
 # Publish jobs to run in CI
