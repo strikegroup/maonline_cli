@@ -6,10 +6,10 @@ use std::process::Command;
 
 #[test]
 fn diagnostics_go_to_stderr_and_global_flags_work_after_subcommands() {
-    for args in [vec!["-v", "companies"], vec!["companies", "-v"]] {
+    for args in [vec!["-v", "ma-data"], vec!["ma-data", "-v"]] {
         let output = Command::new(env!("CARGO_BIN_EXE_maonline"))
             .args(args)
-            .args(["--name", "sample", "--key", " "])
+            .args(["--company", "sample", "--key", " "])
             .output()
             .unwrap();
         assert!(!output.status.success());
@@ -19,7 +19,7 @@ fn diagnostics_go_to_stderr_and_global_flags_work_after_subcommands() {
         assert!(stderr.contains("api key must not be empty"));
     }
     let output = Command::new(env!("CARGO_BIN_EXE_maonline"))
-        .args(["companies", "--name", "sample", "--key", " ", "-qqq"])
+        .args(["ma-data", "--company", "sample", "--key", " ", "-qqq"])
         .output()
         .unwrap();
     assert!(!output.status.success());

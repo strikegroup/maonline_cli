@@ -5,11 +5,9 @@
 mod api_client;
 mod app_config;
 mod app_paths;
-mod companies;
 mod input;
 mod logging;
 mod ma_data;
-mod news;
 mod pagination;
 
 use clap::{Command, CommandFactory, FromArgMatches, Parser};
@@ -21,13 +19,11 @@ const HELP_TEMPLATE: &str =
 #[command(
     name = "maonline",
     version = env!("CARGO_PKG_VERSION"),
-    about = "M&A Online の企業情報、M&A案件、ニュース・速報を検索するCLIツール",
+    about = "M&A Online のM&A案件を検索するCLIツール",
     arg_required_else_help = true,
     after_help = "使用例:\n  \
                   maonline setup --key YOUR_API_KEY\n  \
-                  maonline companies --name ストライク\n  \
-                  maonline ma-data --company トヨタ --min-price 1000000000\n  \
-                  maonline news search TOB --article-type tob_news\n\n\
+                  maonline ma-data --company トヨタ --min-price 1000000000\n\n\
                   各コマンドの詳細は `maonline <COMMAND> --help` で確認できます。"
 )]
 struct Cli {
@@ -44,16 +40,6 @@ struct Cli {
 #[derive(clap::Subcommand, Debug)]
 enum SubCommand {
     #[command(
-        about = "企業情報を検索します",
-        after_help = "複数の検索条件を指定した場合は、すべての条件で絞り込みます。\n\n\
-                      使用例:\n  \
-                      maonline companies --name ストライク\n  \
-                      maonline companies --sec-code 7203\n  \
-                      maonline companies --market 東証プライム --name トヨタ",
-        visible_alias = "c"
-    )]
-    Companies(crate::companies::command::CompaniesArgs),
-    #[command(
         about = "M&A案件を検索します",
         after_help = "複数の検索条件を指定した場合は、すべての条件で絞り込みます。\n\n\
                       使用例:\n  \
@@ -64,19 +50,9 @@ enum SubCommand {
     )]
     MaData(crate::ma_data::command::MaDataArgs),
     #[command(
-        about = "ニュース・速報を検索・取得します",
-        after_help = "`search` で一覧を検索し、`get` で記事IDを指定して1件取得します。\n\n\
-                      使用例:\n  \
-                      maonline news search ストライク\n  \
-                      maonline news search --article-type tob_news\n  \
-                      maonline news get summary20251011",
-        visible_alias = "n"
-    )]
-    News(crate::news::command::NewsArgs),
-    #[command(
         about = "M&A Online API の API キーを登録します",
         after_help = "利用特約（https://maonline.jp/pages/policy_researchkit）を確認し、同意すると API キーを保存します。\n\
-                      登録後は、各検索コマンドで API キーを指定する必要はありません。\n\n\
+                      登録後は、ma-data コマンドで API キーを指定する必要はありません。\n\n\
                       使用例:\n  maonline setup --key YOUR_API_KEY"
     )]
     Setup(crate::app_config::SetupArgs),
@@ -106,17 +82,13 @@ async fn main() -> std::process::ExitCode {
 
 async fn run(cli: Cli) -> anyhow::Result<()> {
     let command = match &cli.subcommand {
-        SubCommand::Companies(_) => "companies",
         SubCommand::MaData(_) => "ma-data",
-        SubCommand::News(_) => "news",
         SubCommand::Setup(_) => "setup",
         SubCommand::Status => "status",
     };
     tracing::debug!(command, "command started");
     match cli.subcommand {
-        SubCommand::Companies(command) => crate::companies::command::run(command).await?,
         SubCommand::MaData(command) => crate::ma_data::command::run(command).await?,
-        SubCommand::News(command) => crate::news::command::run(command).await?,
         SubCommand::Setup(command) => crate::app_config::run_setup(command)?,
         SubCommand::Status => print_status()?,
     }
@@ -203,12 +175,10 @@ mod tests {
     fn root_help_is_concise_and_guides_command_discovery() {
         let help = render_help(&[]);
 
-        assert!(help.contains("M&A Online の企業情報、M&A案件、ニュース・速報を検索するCLIツール"));
+        assert!(help.contains("M&A Online のM&A案件を検索するCLIツール"));
         assert!(help.contains("maonline setup --key YOUR_API_KEY"));
         assert!(help.contains("maonline <COMMAND> --help"));
-        assert!(help.contains("企業情報を検索します"));
         assert!(help.contains("M&A案件を検索します"));
-        assert!(help.contains("ニュース・速報を検索・取得します"));
         assert!(!help.contains("検索条件を1つ以上指定してください"));
         assert!(help.contains("使い方: maonline [OPTIONS] <COMMAND>"));
         assert!(help.contains("コマンド:"));
@@ -219,14 +189,10 @@ mod tests {
     #[test]
     fn every_command_has_a_usage_example() {
         for (path, example) in [
-            (&["companies"][..], "maonline companies --name ストライク"),
             (
                 &["ma-data"][..],
                 "maonline ma-data --area 東京都 --inout IN-IN",
             ),
-            (&["news"][..], "maonline news search ストライク"),
-            (&["news", "search"][..], "maonline news search \"M&A\""),
-            (&["news", "get"][..], "maonline news get summary20251011"),
             (&["setup"][..], "maonline setup --key YOUR_API_KEY"),
             (&["status"][..], "maonline status"),
         ] {
@@ -242,32 +208,21 @@ mod tests {
     #[test]
     fn subcommand_help_keeps_operational_details_out_of_root_help() {
         let root_help = render_help(&[]);
-        let companies_help = render_help(&["companies"]);
+        let ma_data_help = render_help(&["ma-data"]);
 
         assert!(!root_help.contains("複数の検索条件を指定した場合"));
-        assert!(companies_help.contains("複数の検索条件を指定した場合"));
+        assert!(ma_data_help.contains("複数の検索条件を指定した場合"));
     }
 
     #[test]
-    fn api_key_options_use_consistent_help() {
-        for path in [&["companies"][..], &["ma-data"][..], &["news"][..]] {
-            let help = render_help(path);
-            assert!(help.contains("API キーを明示的に指定する場合"));
-        }
+    fn ma_data_help_explains_api_key_option() {
+        let help = render_help(&["ma-data"]);
+        assert!(help.contains("API キーを明示的に指定する場合"));
     }
 
     #[test]
     fn short_and_long_help_flags_have_identical_output() {
-        for command in [
-            &[][..],
-            &["companies"][..],
-            &["ma-data"][..],
-            &["news"][..],
-            &["news", "search"][..],
-            &["news", "get"][..],
-            &["setup"][..],
-            &["status"][..],
-        ] {
+        for command in [&[][..], &["ma-data"][..], &["setup"][..], &["status"][..]] {
             let mut short_args = vec!["maonline"];
             short_args.extend_from_slice(command);
             short_args.push("-h");
@@ -285,12 +240,8 @@ mod tests {
         }
     }
     #[test]
-    fn search_commands_accept_pagination_and_short_options() {
-        for prefix in [
-            vec!["maonline", "companies", "--name", "企業"],
-            vec!["maonline", "ma-data"],
-            vec!["maonline", "news", "search"],
-        ] {
+    fn ma_data_accepts_pagination_and_short_options() {
+        for prefix in [vec!["maonline", "ma-data"], vec!["maonline", "m"]] {
             for options in [
                 vec!["--limit", "20", "--page", "2"],
                 vec!["-l", "200", "-p", "3"],

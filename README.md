@@ -1,12 +1,10 @@
 # M&A Online CLI
 
-[M&A Online](https://maonline.jp/) から、企業情報、M&A案件、ニュース・速報をコマンドラインから検索・取得するツールです。取得結果は JSON 形式で標準出力に書き出します。
+[M&A Online](https://maonline.jp/) から、M&A案件をコマンドラインから検索するツールです。取得結果は JSON 形式で標準出力に書き出します。
 
 ## できること
 
-- 証券コード、EDINETコード、企業名などによる企業情報の検索
 - 当事者、買収金額、スキームなどによるM&A案件の検索
-- ニュース、大量保有速報、TOB速報の検索と記事取得
 
 ## インストール
 
@@ -63,62 +61,12 @@ export MAONLINE_API_KEY=YOUR_API_KEY
 通信状況を調べる場合は `-v`、ログを減らす場合は `-q` を指定します。診断ログは標準エラーへ、検索結果のJSONは標準出力へ出力します。
 
 ```bash
-maonline -v companies --name ストライク > companies.json
+maonline -v ma-data --company ストライク > ma_data.json
 ```
 
 ## ユースケース
 
 以下のレスポンス例は、主要なフィールドと検索結果を抜粋しています。
-
-### 企業名から企業情報を調べる
-
-企業名またはカナの一部を指定して、該当する企業の証券コード、EDINETコード、市場区分、所在地などを取得します。
-
-```bash
-maonline companies --name ストライク
-```
-
-```json
-[
-  {
-    "sec_code": "6196",
-    "edinet_code": "E32380",
-    "company_name": "ストライクグループ",
-    "market": "東証プライム",
-    "address": "千代田区大手町一丁目２番１号",
-    "homepage": "http://www.strike.co.jp/"
-  },
-  {
-    "sec_code": "9816",
-    "edinet_code": "E02738",
-    "company_name": "ストライダーズ",
-    "market": "東証スタンダード",
-    "address": "東京都港区新橋５－１３－５ 新橋ＭＣＶビル",
-    "homepage": "http://www.striders.co.jp/"
-  }
-]
-```
-
-### 証券コードから企業情報を取得する
-
-証券コードを指定すると、完全一致する企業を検索できます。
-
-```bash
-maonline companies --sec-code 7203
-```
-
-```json
-[
-  {
-    "sec_code": "7203",
-    "edinet_code": "E02144",
-    "company_name": "トヨタ自動車",
-    "market": "東証プライム、名証プレミア",
-    "address": "愛知県豊田市トヨタ町１",
-    "homepage": "http://www.toyota.co.jp/"
-  }
-]
-```
 
 ### 楽天が関係するM&A案件を調べる
 
@@ -204,77 +152,13 @@ maonline ma-data --min-price 1000000000000
 ]
 ```
 
-### ストライクに関するニュースを検索
-
-タイトル、本文、タグを対象にニュース記事を検索します。
-
-```bash
-maonline news search ストライク
-```
-
-```json
-[
-  {
-    "id": "20230113jp",
-    "title": "M＆A総合研究所、持ち株会社制移行で3月に「M＆A総研ホールディングス」に社名変更",
-    "body_html": "<p>記事本文...</p>",
-    "published_at": "2023-01-13T16:02:00+09:00",
-    "related_codes": [
-      "9552"
-    ]
-  }
-]
-```
-
-### TOB速報を絞り込む
-
-記事種別を `tob_news` に指定して、TOB速報だけを検索します。
-
-```bash
-maonline news search トヨタ --article-type tob_news
-```
-
-```json
-[
-  {
-    "id": "2026_004a",
-    "title": "トヨタアセット準備（トヨタ不動産）、豊田自動織機＜6201＞にTOB開始",
-    "body_html": "<p>記事本文...</p>",
-    "published_at": "2026-01-15T00:00:00+09:00",
-    "related_codes": [
-      "6201",
-      "E01514",
-      "E41388"
-    ]
-  }
-]
-```
-
-### 記事IDからニュースを取得する
-
-検索結果に含まれる記事IDを指定して、記事を1件取得します。 (記事IDが分かっているときのみ)
-
-```bash
-maonline news get summary20251011
-```
-
-```json
-{
-  "id": "summary20251011",
-  "title": "1週間のM&A速報まとめ（2025年10月6日〜2025年10月10日）",
-  "body_html": "<h3 class='dateheader'>2025年10月6日</h3><p>記事本文...</p>"
-}
-```
-
 ## コマンドリファレンス
 
 ### コマンド一覧
 
 | コマンド | 短縮形 | 概要 |
 |---|---|---|
-| `companies` | `c` | 企業情報を検索します |
 | `ma-data` | `m` | M&A案件を検索します |
-| `news` | `n` | ニュース・速報を検索・取得します |
 | `setup` | － | API キーを登録します |
 | `status` | `s` | 設定状態を確認します |
 
@@ -282,14 +166,12 @@ maonline news get summary20251011
 
 ```bash
 maonline --help
-maonline companies --help
 maonline ma-data --help
-maonline news search --help
 ```
 
 ### 検索結果の件数・ページ指定
 
-`companies`、`ma-data`、`news search` では、次の共通オプションを使えます。
+`ma-data` では、次のオプションを使えます。
 
 | オプション | 内容 |
 |---|---|
@@ -299,24 +181,8 @@ maonline news search --help
 `--limit` が1以上の場合は指定ページだけを取得し、後続ページは取得しません。`--limit` が未指定または `0` の場合、`--page` は1のみ指定できます。出力は従来どおりJSON配列です。
 
 ```bash
-maonline companies --name トヨタ --limit 10
 maonline ma-data --company 楽天 --limit 20 --page 2
-maonline news search TOB -l 20 -p 2
 ```
-
-### `companies`
-
-証券コード、企業名、EDINETコード、市場区分のうち、1つ以上を指定します。複数指定した場合は、すべての条件で絞り込みます。
-
-| オプション | 内容 |
-|---|---|
-| `-s, --sec-code SEC_CODE` | 証券コードで完全一致検索 |
-| `-n, --name COMPANY_NAME` | 企業名またはカナで曖昧検索 |
-| `-e, --edinet-code EDINET_CODE` | EDINETコードで完全一致検索 |
-| `-m, --market MARKET` | 市場区分で絞り込み |
-| `-k, --key API_KEY` | API キーを明示的に指定する場合 |
-
-検索文字列の前後の空白は除去します。空白だけの条件は指定できません。証券コードは4文字の半角英数字、EDINETコードは `E` と5桁の数字で指定します。コードの英字は大文字に揃えます。
 
 ### `ma-data`
 
@@ -333,43 +199,6 @@ maonline news search TOB -l 20 -p 2
 | `-k, --key API_KEY` | API キーを明示的に指定する場合 |
 
 買収金額は下限が上限以下になるよう指定します。
-
-### `news search`（短縮形: `news s`）
-
-キーワード、関連企業、記事種別、公開日の範囲を組み合わせてニュース記事を検索します。条件を省略した場合は全記事が対象です。
-
-API キーを明示的に指定する場合は、`news` の直後、サブコマンドの前に指定します。
-
-```text
-maonline news --key API_KEY search QUERY
-```
-
-| 引数・オプション | 内容 |
-|---|---|
-| `QUERY` | タイトル、本文、タグを対象にキーワード検索 |
-| `-c, --company COMPANY_NAME` | 関連企業名で絞り込み |
-| `-a, --article-type TYPE` | 記事種別で絞り込み |
-| `-f, --date-from YYYY-MM-DD` | 指定日以降に公開された記事へ絞り込み |
-| `-t, --date-to YYYY-MM-DD` | 指定日以前に公開された記事へ絞り込み |
-| `-w, --with-raw` | 解析前の本文を `body_raw` として出力 |
-
-日付は実在する日を `YYYY-MM-DD` で指定します。開始日は終了日以前にしてください。
-
-記事種別には次の値を指定できます。
-
-| 値 | 記事種別 |
-|---|---|
-| `news` | ニュース |
-| `shareholdings` | 大量保有速報 |
-| `tob_news` | TOB速報 |
-
-### `news get`（短縮形: `news g`）
-
-```text
-maonline news get ARTICLE_ID
-```
-
-検索結果に含まれる記事IDを指定して、ニュース記事を1件取得します。
 
 ### `setup`
 

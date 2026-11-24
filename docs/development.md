@@ -36,11 +36,7 @@ cargo fmt --check
 cargo check --locked
 cargo test --locked
 cargo run -- --help
-cargo run -- companies --help
 cargo run -- ma-data --help
-cargo run -- news --help
-cargo run -- news search --help
-cargo run -- news get --help
 cargo run -- setup --help
 cargo run -- status --help
 ```
@@ -54,14 +50,12 @@ node --test .github/scripts/publish.test.mjs
 通常のテストは外部 API に接続しません。登録済み API キーを使う疎通確認は個別に実行します。
 
 ```bash
-cargo run -- companies --name ストライク
 cargo run -- ma-data --company ストライク
-cargo run -- news search ストライク
 ```
 
 ## プロジェクト構成
 
-このリポジトリは単一 crate 構成です。CLI と各 API のクライアントを同じ crate 内で管理します。
+このリポジトリは単一 crate 構成です。CLI と M&A 案件 API のクライアントを同じ crate 内で管理します。
 
 ```text
 .
@@ -73,9 +67,7 @@ cargo run -- news search ストライク
 │   ├── app_config.rs
 │   ├── app_paths.rs
 │   ├── main.rs
-│   ├── companies/
-│   ├── ma_data/
-│   └── news/
+│   └── ma_data/
 ├── Cargo.toml
 ├── release-plz.toml
 └── README.md
@@ -87,17 +79,15 @@ cargo run -- news search ストライク
 - `src/api_client.rs`: 共通HTTPクライアント、タイムアウト、再試行、ページ取得を担当します。
 - `src/app_config.rs`: API キーの保存、読込、解決を担当します。
 - `src/app_paths.rs`: OS 標準の設定・データ保存先を解決します。
-- `src/companies/`: 企業情報の検索と出力モデルへの変換を担当します。
 - `src/ma_data/`: M&A 案件の検索と出力モデルへの変換を担当します。
-- `src/news/`: ニュースの検索、記事取得、出力モデルへの変換を担当します。
 
 ## API クライアントの構成
 
-各機能は、CLI 引数と実行処理を持つ `command.rs`、HTTP 通信を行う `requester.rs`、API レスポンスを表す `raw_response.rs`、外部出力用モデルに分かれています。
+`src/ma_data/` は、CLI 引数と実行処理を持つ `command.rs`、HTTP 通信を行う `requester.rs`、API レスポンスを表す `raw_response.rs`、外部出力用モデルに分かれています。
 
 HTTP 通信は `api_client.rs` に集約しています。接続タイムアウトは5秒、1リクエストは30秒です。通信失敗と HTTP 429・500・502・503・504 は最大3回再試行します。待機は指数バックオフと `Retry-After`（秒数またはHTTP日時）に対応し、1回あたり最大30秒です。認証失敗や不正なJSONは再試行せず、エラーを分類して返します。
 
-API キーは Bearer 認証として送信します。企業情報、M&A 案件、ニュース検索は、既定では1ページ200件で取得し、`next_page` がある間は後続ページを結合します。`--limit` に1〜200を指定した場合は、その値を `per_page` に、`--page` を `page` に渡して指定ページのみ取得します。`--limit 0` は全件取得で、この場合は `--page 1` のみ使用できます。出力は標準出力へ整形済み JSON として書き出し、エラーは `anyhow` のコンテキストを付けて呼び出し元へ返します。
+API キーは Bearer 認証として送信します。M&A 案件の検索は、既定では1ページ200件で取得し、`next_page` がある間は後続ページを結合します。`--limit` に1〜200を指定した場合は、その値を `per_page` に、`--page` を `page` に渡して指定ページのみ取得します。`--limit 0` は全件取得で、この場合は `--page 1` のみ使用できます。出力は標準出力へ整形済み JSON として書き出し、エラーは `anyhow` のコンテキストを付けて呼び出し元へ返します。
 
 API 項目やクエリパラメータを変更する場合は、次を合わせて確認してください。
 
@@ -123,7 +113,7 @@ API 項目やクエリパラメータを変更する場合は、次を合わせ�
 - API レスポンスのデシリアライズ
 - 外部出力モデルへの変換
 - ローカル模擬HTTPサーバー（wiremock）での認証ヘッダー、ページ取得、429・5xxの再試行、401・不正JSON・タイムアウト
-- 記事ID・企業コード・実在する日付・空白入力・日付と金額の範囲の検証、および検索文字列の前後空白の除去
+- 空白入力・金額の範囲の検証、および検索文字列の前後空白の除去
 - 件数・ページ指定、指定ページ取得後の停止、部分的な最終ページと空ページ
 
 外部 API の可用性や実データに依存する確認は自動テストへ含めず、登録済み API キーを使って手動で確認します。API キーそのものをテストコード、ログ、コミットへ含めないでください。

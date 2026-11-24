@@ -338,7 +338,7 @@ mod tests {
         for status in [429, 500, 502, 503, 504] {
             let server = MockServer::start().await;
             Mock::given(method("GET"))
-                .and(path("/news/"))
+                .and(path("/ma_data/"))
                 .and(header("authorization", "Bearer test-key"))
                 .respond_with(ResponseTemplate::new(status).insert_header("Retry-After", "0"))
                 .up_to_n_times(1)
@@ -353,7 +353,7 @@ mod tests {
                 .await;
             let client = ApiClient::for_test(&format!("{}/", server.uri()));
             let result: Value = client
-                .get_json(&client.endpoint("news/"), &[])
+                .get_json(&client.endpoint("ma_data/"), &[])
                 .await
                 .unwrap();
             assert_eq!(result, json!({"ok":true}));
@@ -370,7 +370,7 @@ mod tests {
             .await;
         let client = ApiClient::for_test(&format!("{}/", server.uri()));
         let error = client
-            .get_json::<Value>(&client.endpoint("news/"), &[])
+            .get_json::<Value>(&client.endpoint("ma_data/"), &[])
             .await
             .unwrap_err();
         assert_eq!(error.kind, ErrorKind::Server);
@@ -393,7 +393,7 @@ mod tests {
                 .await;
             let client = ApiClient::for_test(&format!("{}/", server.uri()));
             let error = client
-                .get_json::<Value>(&client.endpoint("news/"), &[])
+                .get_json::<Value>(&client.endpoint("ma_data/"), &[])
                 .await
                 .unwrap_err();
             assert_eq!(error.kind, kind);
@@ -425,7 +425,7 @@ mod tests {
         )
         .unwrap();
         let error = client
-            .get_json::<Value>(&client.endpoint("news/"), &[])
+            .get_json::<Value>(&client.endpoint("ma_data/"), &[])
             .await
             .unwrap_err();
         assert_eq!(error.kind, ErrorKind::Timeout);
@@ -452,7 +452,7 @@ mod tests {
             let client = ApiClient::for_test(&format!("{}/", server.uri()));
             let error = client
                 .get_pages::<Page, _>(
-                    "news/",
+                    "ma_data/",
                     Default::default(),
                     |page| vec![("page", page.to_string())],
                     |page| (page.data, page.next_page),
@@ -477,7 +477,7 @@ mod tests {
         let client = ApiClient::for_test(&format!("{}/", server.uri()));
         let error = client
             .get_pages::<Page, _>(
-                "news/",
+                "ma_data/",
                 Default::default(),
                 |page| vec![("page", page.to_string())],
                 |page| (page.data, page.next_page),
